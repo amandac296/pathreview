@@ -15,3 +15,16 @@ frontend/src/hooks/useProfileSubmit.ts. A successful fix would be to disable to 
 **Setup confirmation:** [X] App runs locally at localhost:5173
 
 **Cohort ledger:** [ ] Issue added to cohort ledger
+
+## Week 8 — Reproduction & solution planning
+
+**Reproduction commit link:** [paste link here once pushed]
+
+**Reproduction summary:** When trying to see what happens on the normal UI, it doesn't really fire more than one POST /profiles request. (apparently react can disable the button faster than a human can click). So, I decided to fire 2 POST /profiles requests from the browser console with the same github username and the results showed that they both returned 200 OK with 2 diff profile ids even though they have the same user_id.
+
+**PLAN.md link:** [paste link here]
+
+**Walkthrough video (recommended):** [link here, or leave blank]
+
+**Blockers or open questions:**
+[anything uncertain going into Week 9, or leave blank]
