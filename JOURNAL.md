@@ -18,11 +18,11 @@ frontend/src/hooks/useProfileSubmit.ts. A successful fix would be to disable to 
 
 ## Week 8 — Reproduction & solution planning
 
-**Reproduction commit link:** [paste link here once pushed]
+**Reproduction commit link:** https://github.com/amandac296/pathreview/commit/cdf7f98
 
-**Reproduction summary:** When trying to see what happens on the normal UI, it doesn't really fire more than one POST /profiles request. (apparently react can disable the button faster than a human can click). So, I decided to fire 2 POST /profiles requests from the browser console with the same github username and the results showed that they both returned 200 OK with 2 diff profile ids even though they have the same user_id.
+**Reproduction summary:** When trying to see what happens on the normal UI, it doesn't really fire more than one POST /profiles request. (apparently react can disable the button faster than a human can click). So, I created an integration test that checks if only 1 profile should be created which fails so it confirms there's a bug.
 
-**PLAN.md link:** [paste link here]
+**PLAN.md link:** https://github.com/amandac296/pathreview/blob/fix/92-profile-form-loading-state/PLAN.md
 
 **Walkthrough video (recommended):** [link here, or leave blank]
 
