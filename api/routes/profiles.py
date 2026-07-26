@@ -1,18 +1,21 @@
-from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File, Form
-from uuid import UUID
-import structlog
 import mimetypes
+from typing import cast
+from uuid import UUID
 
-from api.schemas.profile import ProfileCreate, ProfileResponse, ProfileUpdate
+import structlog
+from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile, status
+from sqlalchemy.exc import IntegrityError
+from sqlalchemy.ext.asyncio import AsyncSession
+
 from api.middleware.auth import get_current_user
-from core.models.user import User
-from core.models.profile import Profile
+from api.schemas.profile import ProfileCreate, ProfileResponse, ProfileUpdate
 from core.database import get_db
+from core.models.user import User
 from core.services.profile_service import (
     create_profile,
+    delete_profile,
     get_profile,
     update_profile,
-    delete_profile,
 )
 
 log = structlog.get_logger()
@@ -26,8 +29,8 @@ async def create_profile_endpoint(
     portfolio_url: str = Form(default=None),
     resume_file: UploadFile = File(default=None),
     current_user: User = Depends(get_current_user),
-    db=Depends(get_db),
-):
+    db: AsyncSession = Depends(get_db),
+) -> ProfileResponse:
     """
     Create a new profile with optional resume upload.
     Resume must be PDF or Markdown.
@@ -59,16 +62,15 @@ async def create_profile_endpoint(
             if file_mime == "application/pdf":
                 try:
                     import PyPDF2
+
                     pdf_reader = PyPDF2.PdfReader(content)
-                    resume_text = "\n".join(
-                        page.extract_text() for page in pdf_reader.pages
-                    )
+                    resume_text = "\n".join(page.extract_text() for page in pdf_reader.pages)
                 except Exception as exc:
                     log.error("pdf_parsing_failed", error=str(exc))
                     raise HTTPException(
                         status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
                         detail="Failed to parse PDF resume",
-                    )
+                    ) from exc
             else:
                 # Markdown or plain text
                 resume_text = content.decode("utf-8")
@@ -95,25 +97,36 @@ async def create_profile_endpoint(
             user_id=str(current_user.id),
         )
 
-        return ProfileResponse.model_validate(new_profile)
+        return cast("ProfileResponse", ProfileResponse.model_validate(new_profile))
 
     except HTTPException:
         raise
+    except IntegrityError as exc:
+        log.warning(
+            "profile_creation_duplicate",
+            user_id=str(current_user.id),
+            error=str(exc),
+        )
+        await db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="You already have a profile",
+        ) from exc
     except Exception as exc:
         log.error("profile_creation_error", error=str(exc))
         await db.rollback()
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to create profile",
-        )
+        ) from exc
 
 
 @router.get("/{profile_id}", response_model=ProfileResponse)
 async def get_profile_endpoint(
     profile_id: UUID,
     current_user: User = Depends(get_current_user),
-    db=Depends(get_db),
-):
+    db: AsyncSession = Depends(get_db),
+) -> ProfileResponse:
     """
     Get a profile by ID.
     Returns 404 if not found or not owned by current user.
@@ -132,7 +145,7 @@ async def get_profile_endpoint(
                 detail="Profile not found",
             )
 
-        return ProfileResponse.model_validate(profile)
+        return cast("ProfileResponse", ProfileResponse.model_validate(profile))
 
     except HTTPException:
         raise
@@ -141,7 +154,7 @@ async def get_profile_endpoint(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to retrieve profile",
-        )
+        ) from exc
 
 
 @router.put("/{profile_id}", response_model=ProfileResponse)
@@ -149,8 +162,8 @@ async def update_profile_endpoint(
     profile_id: UUID,
     data: ProfileUpdate,
     current_user: User = Depends(get_current_user),
-    db=Depends(get_db),
-):
+    db: AsyncSession = Depends(get_db),
+) -> ProfileResponse:
     """
     Update a profile.
     Returns 404 if not found or not owned by current user.
@@ -180,7 +193,7 @@ async def update_profile_endpoint(
             user_id=str(current_user.id),
         )
 
-        return ProfileResponse.model_validate(updated_profile)
+        return cast("ProfileResponse", ProfileResponse.model_validate(updated_profile))
 
     except HTTPException:
         raise
@@ -190,15 +203,15 @@ async def update_profile_endpoint(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to update profile",
-        )
+        ) from exc
 
 
 @router.delete("/{profile_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_profile_endpoint(
     profile_id: UUID,
     current_user: User = Depends(get_current_user),
-    db=Depends(get_db),
-):
+    db: AsyncSession = Depends(get_db),
+) -> None:
     """
     Delete a profile and cascade delete reviews and ingested sources.
     Returns 404 if not found or not owned by current user.
@@ -235,4 +248,4 @@ async def delete_profile_endpoint(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to delete profile",
-        )
+        ) from exc

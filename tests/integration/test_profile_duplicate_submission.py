@@ -1,15 +1,15 @@
 """Integration test reproducing issue #92.
 
-The profile-creation form has no server-side guard against duplicate
-submissions: core/services/profile_service.py's create_profile() inserts
+The profile-creation form had no server-side guard against duplicate
+submissions: core/services/profile_service.py's create_profile() inserted
 unconditionally, with no uniqueness check or idempotency key. If two
-requests for the same user overlap (slow network, double-click, retry),
-both succeed and two rows get created.
+requests for the same user overlapped (slow network, double-click, retry),
+both succeeded and two rows got created.
 
-This test currently FAILS on purpose: it documents the bug by asserting
-the behavior a fix should guarantee (only one profile per submission),
-which the current implementation does not provide. Once a fix lands, this
-test should pass without modification.
+Fixed via a DB-level unique constraint on profiles.user_id
+(alembic/versions/003_add_unique_constraint_on_profiles_user_id.py). This
+test now asserts that of two concurrent submissions, exactly one succeeds
+and the other raises IntegrityError, leaving exactly one row behind.
 """
 
 import asyncio
@@ -17,6 +17,7 @@ import uuid
 
 import pytest
 from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
 
 from api.schemas.profile import ProfileCreate
 from core.database import AsyncSessionLocal
@@ -45,7 +46,17 @@ async def test_concurrent_submissions_do_not_create_duplicate_profiles() -> None
             return await create_profile(db=db, user_id=user_id, data=data)
 
     try:
-        await asyncio.gather(submit(), submit())
+        results = await asyncio.gather(submit(), submit(), return_exceptions=True)
+
+        successes = [r for r in results if isinstance(r, Profile)]
+        failures = [r for r in results if isinstance(r, IntegrityError)]
+
+        assert (
+            len(successes) == 1
+        ), f"Expected exactly 1 successful submission, got {len(successes)}"
+        assert (
+            len(failures) == 1
+        ), f"Expected exactly 1 submission to fail with IntegrityError, got {len(failures)}"
 
         async with AsyncSessionLocal() as db:
             result = await db.execute(select(Profile).where(Profile.user_id == user_id))

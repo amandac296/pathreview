@@ -28,3 +28,35 @@ frontend/src/hooks/useProfileSubmit.ts. A successful fix would be to disable to 
 
 **Blockers or open questions:**
 [anything uncertain going into Week 9, or leave blank]
+
+
+## Week 9 — Solution building & PR submission
+
+### Check-in 1 (mid-week)
+
+**Current progress:**
+Added a unique constraint on `profiles.user_id` in `core/models/profile.py`,the Alembic migration (`003_add_unique_constraint_on_profiles_user_id.py`) with a cleanup step that deletes duplicate rows (keeping the newest per user) before adding the constraint, added `IntegrityError` -> `409 Conflict` handling in `create_profile_endpoint`,
+
+**Next steps:**
+Check make test unit and the added integration test pass with no new errors. Make sure make check passes with the newly added files. Update `test_profile_duplicate_submission.py` to check that one submission succeeds, the other raises `IntegrityError`, exactly one row remains. 
+
+**Blockers:**
+Black can't run locally — Python 3.12.5 hits a known AST-safety-check bug in Black (needs 3.12.6+ or 3.12.4). 
+
+---
+
+### Check-in 2 (end of week)
+
+**PR link:** [link to your submitted pull request]
+
+**Branch:** `fix/92-profile-form-loading-state`
+
+**What you built:**
+Added a unique constraint on profiles.user_id so a user can only ever have one profile row. The migration deletes any existing duplicate rows (keeping the newest per user) before adding the constraint, and `create_profile_endpoint` now catches the resulting `IntegrityError` and returns `409 Conflict` instead of silently creating a second row (previously a generic 500).
+
+**Tests added or updated:**
+`tests/integration/test_profile_duplicate_submission.py` — updated the Week 8 reproduction test to assert the fixed behavior: of two concurrent submissions for the same user, exactly one succeeds and the other raises `IntegrityError`, leaving exactly one row in the database.
+
+**Self-review confirmation:** [x] make check passes  [x] make test-unit passes
+
+**Draft PR feedback received from:** none
