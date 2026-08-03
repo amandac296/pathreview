@@ -60,3 +60,36 @@ Added a unique constraint on profiles.user_id so a user can only ever have one p
 **Self-review confirmation:** [x] make check passes  [x] make test-unit passes
 
 **Draft PR feedback received from:** none
+
+## Week 10 — Iteration & reflection
+
+### Reviewer feedback
+
+**Feedback received:** [ ] Yes  [X] No — still awaiting review
+
+**Summary of feedback:**
+N/A
+
+**How you responded:**
+N/A
+
+---
+
+### Reflection
+
+**What was harder than you expected?**
+The planning part (week 2) was harder than I expected where I had to reproduce the error and get a good picture of the overall code.
+
+**What did you learn about working in a large codebase?**
+The importance of labeling/commenting code and making sure it's consistent throuhgout the codebase as well as making sure if you're working on a large codebase collaboratively, to make sure the commits and pushes are specific and in depth.
+
+**How did AI tools help — and where did they fall short?**
+It was useful in helping me understand the codebase quicker than if I were to do it by myself. I also learned about new libraries and new software that I would've needed longer time on for if not for AI. I think it falls short in writing our code as AI is not always consistent and could also midunderstand what we want it to really do.
+
+**What would you do differently if you started over?**
+[Issue selection, planning, implementation, or process — anything
+you'd change?]
+My issue got closed so I probably should've started over but I was already committed to the bug. I also think my implmentation could be better and more organized. 
+
+**What are you most proud of from this module?**
+I'm most proud of familiarizing myself with new concepts with AI and learning about coding industry standards on a large codebase collaboratively with other people.
